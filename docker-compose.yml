@@ -14,12 +14,24 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      target: builder
+    command: node node_modules/prisma/build/index.js migrate deploy
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
   app:
     build: .
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:
