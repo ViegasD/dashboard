@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +55,7 @@ function toISODate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-// ─── Habits Tab ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Habits Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function HabitsTab({ weekStart }: { weekStart: Date }) {
   const { t } = useI18n();
@@ -271,7 +271,7 @@ function HabitsTab({ weekStart }: { weekStart: Date }) {
                       <span className={`w-2 h-2 rounded-full shrink-0 ${habit.color}`} />
                       <span className="font-medium truncate max-w-32">{habit.title}</span>
                       {habit.startHour !== null && (
-                        <span className="text-xs text-muted-foreground">{habit.startHour}–{habit.endHour}</span>
+                        <span className="text-xs text-muted-foreground">{habit.startHour}â€“{habit.endHour}</span>
                       )}
                     </div>
                   </td>
@@ -319,7 +319,7 @@ function HabitsTab({ weekStart }: { weekStart: Date }) {
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function PlansPage() {
   const { t } = useI18n();
@@ -435,7 +435,7 @@ export default function PlansPage() {
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <span className="text-sm font-medium min-w-44 text-center">
-                {formatDate(weekStart)} – {formatDate(weekEnd)}
+                {formatDate(weekStart)} â€“ {formatDate(weekEnd)}
               </span>
               <Button variant="outline" size="icon" onClick={nextWeek}>
                 <ChevronRight className="w-4 h-4" />
@@ -540,7 +540,7 @@ export default function PlansPage() {
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <span className="text-sm font-medium min-w-44 text-center">
-                  {formatDate(weekStart)} – {formatDate(weekEnd)}
+                  {formatDate(weekStart)} â€“ {formatDate(weekEnd)}
                 </span>
                 <Button variant="outline" size="icon" onClick={nextWeek}>
                   <ChevronRight className="w-4 h-4" />
@@ -618,7 +618,7 @@ export default function PlansPage() {
                             title={t.title}
                           >
                             <div className="font-medium truncate">{t.title}</div>
-                            <div className="opacity-80">{t.startHour}:00 – {t.endHour}:00</div>
+                            <div className="opacity-80">{t.startHour}:00 â€“ {t.endHour}:00</div>
                             <button
                               className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/20 rounded"
                               onClick={() => deleteTask(t.id)}
@@ -644,7 +644,7 @@ export default function PlansPage() {
                             title={h.title}
                           >
                             <div className="font-medium truncate pr-5">{h.title}</div>
-                            <div className="opacity-80">{h.startHour}:00 – {h.endHour}:00</div>
+                            <div className="opacity-80">{h.startHour}:00 â€“ {h.endHour}:00</div>
                             <button
                               className="absolute top-0.5 right-0.5 p-0.5 hover:bg-white/20 rounded transition-colors"
                               onClick={() => toggleHabitLog(h.id, dateStr, isDone)}
@@ -683,283 +683,6 @@ export default function PlansPage() {
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const START_HOUR = 7;
-const END_HOUR = 20;
-const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
-const SLOT_HEIGHT = 56;
-
-interface PlannedTask {
-  id: string; title: string; day: number;
-  startHour: number; endHour: number; color: string;
-}
-
-function getWeekStart(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function addDays(date: Date, n: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function toISODate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-export default function PlansPage() {
-  const { t } = useI18n();
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const [calDate, setCalDate] = useState<Date | undefined>(new Date());
-  const [tasks, setTasks] = useState<PlannedTask[]>([]);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [newTask, setNewTask] = useState({ title: "", day: 0, startHour: 9, endHour: 10, color: "bg-blue-500" });
-
-  function loadTasks(ws: Date) {
-    fetch(`/api/plans?weekStart=${toISODate(ws)}`)
-      .then((r) => r.ok ? r.json() : [])
-      .then(setTasks);
-  }
-
-  useEffect(() => { loadTasks(weekStart); }, [weekStart]);
-
-  const weekEnd = addDays(weekStart, 6);
-  const isCurrentWeek = getWeekStart(new Date()).getTime() === weekStart.getTime();
-  const totalHeight = HOURS.length * SLOT_HEIGHT;
-
-  function prevWeek() { setWeekStart((d) => addDays(d, -7)); }
-  function nextWeek() { setWeekStart((d) => addDays(d, 7)); }
-  function goToday() {
-    setWeekStart(getWeekStart(new Date()));
-    setCalDate(new Date());
-  }
-
-  async function createTask(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    await fetch("/api/plans", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newTask, weekStart: toISODate(weekStart) }),
-    });
-    setSaving(false);
-    setSheetOpen(false);
-    setNewTask({ title: "", day: 0, startHour: 9, endHour: 10, color: "bg-blue-500" });
-    loadTasks(weekStart);
-  }
-
-  async function deleteTask(id: string) {
-    await fetch(`/api/plans/${id}`, { method: "DELETE" });
-    setTasks((prev) => prev.filter((t) => t.id !== id));
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t.plans.title}</h1>
-          <p className="text-muted-foreground">{t.plans.subtitle}</p>
-        </div>
-        <Button size="sm" onClick={() => setSheetOpen(true)}>
-          <Plus className="w-4 h-4 mr-1" /> {t.plans.newTask}
-        </Button>
-      </div>
-
-      {/* New task sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-sm overflow-y-auto p-6">
-          <SheetHeader>
-            <SheetTitle>{t.plans.newTask}</SheetTitle>
-          </SheetHeader>
-          <form onSubmit={createTask} className="space-y-4 mt-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">{t.plans.titleLabel} *</label>
-              <Input required value={newTask.title} onChange={(e) => setNewTask((f) => ({ ...f, title: e.target.value }))} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">{t.plans.dayLabel}</label>
-              <select
-                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                value={newTask.day}
-                onChange={(e) => setNewTask((f) => ({ ...f, day: Number(e.target.value) }))}
-              >
-                {DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">{t.plans.startHour}</label>
-                <select
-                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                  value={newTask.startHour}
-                  onChange={(e) => setNewTask((f) => ({ ...f, startHour: Number(e.target.value) }))}
-                >
-                  {HOURS.map((h) => <option key={h} value={h}>{h}:00</option>)}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">{t.plans.endHour}</label>
-                <select
-                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                  value={newTask.endHour}
-                  onChange={(e) => setNewTask((f) => ({ ...f, endHour: Number(e.target.value) }))}
-                >
-                  {HOURS.filter((h) => h > newTask.startHour).map((h) => <option key={h} value={h}>{h}:00</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">{t.plans.colorLabel}</label>
-              <select
-                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                value={newTask.color}
-                onChange={(e) => setNewTask((f) => ({ ...f, color: e.target.value }))}
-              >
-                <option value="bg-blue-500">{t.plans.colors.blue}</option>
-                <option value="bg-green-500">{t.plans.colors.green}</option>
-                <option value="bg-purple-500">{t.plans.colors.purple}</option>
-                <option value="bg-orange-500">{t.plans.colors.orange}</option>
-                <option value="bg-red-500">{t.plans.colors.red}</option>
-                <option value="bg-pink-500">{t.plans.colors.pink}</option>
-              </select>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" disabled={saving} className="flex-1">{saving ? t.plans.saving : t.plans.addTask}</Button>
-              <SheetClose render={<Button type="button" variant="outline">{t.plans.cancel}</Button>} />
-            </div>
-          </form>
-        </SheetContent>
-      </Sheet>
-
-      <div className="flex gap-6 flex-col lg:flex-row">
-        {/* Weekly grid */}
-        <div className="flex-1 space-y-4 min-w-0">
-          {/* Week navigation */}
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" onClick={prevWeek}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-44 text-center">
-              {formatDate(weekStart)} – {formatDate(weekEnd)}
-            </span>
-            <Button variant="outline" size="icon" onClick={nextWeek}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            {!isCurrentWeek && (
-              <Button variant="ghost" size="sm" onClick={goToday}>{t.plans.today}</Button>
-            )}
-          </div>
-
-          {/* Header row */}
-          <div className="flex">
-            <div className="w-12 shrink-0" />
-            {DAYS.map((day, i) => {
-              const dayDate = addDays(weekStart, i);
-              const isToday = dayDate.toDateString() === new Date().toDateString();
-              return (
-                <div key={day} className="flex-1 text-center pb-2">
-                  <div className={`text-xs font-semibold ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                    {day}
-                  </div>
-                  <div className={`text-sm font-bold w-7 h-7 mx-auto flex items-center justify-center rounded-full ${
-                    isToday ? "bg-primary text-primary-foreground" : ""
-                  }`}>
-                    {dayDate.getDate()}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Time grid */}
-          <div className="flex overflow-y-auto border rounded-lg" style={{ maxHeight: "560px" }}>
-            {/* Hour labels */}
-            <div className="w-12 shrink-0 relative" style={{ height: totalHeight }}>
-              {HOURS.map((h) => (
-                <div
-                  key={h}
-                  className="absolute right-2 text-[10px] text-muted-foreground -translate-y-2"
-                  style={{ top: (h - START_HOUR) * SLOT_HEIGHT }}
-                >
-                  {h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h - 12} PM`}
-                </div>
-              ))}
-            </div>
-
-            {/* Day columns */}
-            {DAYS.map((day, i) => {
-              const dayTasks = tasks.filter((t) => t.day === i);
-              return (
-                <div key={day} className="flex-1 relative border-l" style={{ height: totalHeight }}>
-                  {HOURS.map((h) => (
-                    <div
-                      key={h}
-                      className="absolute inset-x-0 border-t border-border/50"
-                      style={{ top: (h - START_HOUR) * SLOT_HEIGHT }}
-                    />
-                  ))}
-                  {dayTasks.map((t) => {
-                    const top = (t.startHour - START_HOUR) * SLOT_HEIGHT;
-                    const height = (t.endHour - t.startHour) * SLOT_HEIGHT;
-                    return (
-                      <div
-                        key={t.id}
-                        className={`absolute inset-x-0.5 rounded text-white text-xs px-1.5 py-1 overflow-hidden group ${t.color}`}
-                        style={{ top, height }}
-                        title={t.title}
-                      >
-                        <div className="font-medium truncate">{t.title}</div>
-                        <div className="opacity-80">{t.startHour}:00 – {t.endHour}:00</div>
-                        <button
-                          className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/20 rounded"
-                          onClick={() => deleteTask(t.id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Mini calendar sidebar */}
-        <Card className="lg:w-72 w-full self-start">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Calendar</CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
-            <Calendar
-              mode="single"
-              selected={calDate}
-              onSelect={(d) => {
-                setCalDate(d);
-                if (d) setWeekStart(getWeekStart(d));
-              }}
-              className="rounded-md"
-            />
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
