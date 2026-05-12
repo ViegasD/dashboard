@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime  @default(now())
+  sessions     Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  status      ProjectStatus @default(backlog)
+  tags        String[]
+  dueDate     String?
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tasks       ProjectTask[]
+}
+
+enum ProjectStatus {
+  backlog
+  in_progress
+  done
+}
+
+model ProjectTask {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ── Goals ─────────────────────────────────────────────────────────────────────
+
+model Goal {
+  id          String        @id @default(cuid())
+  title       String
+  category    GoalCategory
+  progress    Int           @default(0)
+  targetDate  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  milestones  Milestone[]
+}
+
+enum GoalCategory {
+  Work
+  Personal
+  Health
+  Learning
+}
+
+model Milestone {
+  id        String   @id @default(cuid())
+  goalId    String
+  label     String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+}
+
+// ── Planned Tasks ─────────────────────────────────────────────────────────────
+
+model PlannedTask {
+  id        String   @id @default(cuid())
+  title     String
+  weekStart DateTime // Monday of the week (time set to 00:00:00 UTC)
+  day       Int      // 0=Mon … 6=Sun
+  startHour Int
+  endHour   Int
+  color     String   @default("bg-blue-500")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── Habits ────────────────────────────────────────────────────────────────────
+
+model Habit {
+  id        String     @id @default(cuid())
+  title     String
+  days      Int[]      // 0=Mon … 6=Sun
+  startHour Int?
+  endHour   Int?
+  color     String     @default("bg-blue-500")
+  createdAt DateTime   @default(now())
+  logs      HabitLog[]
+}
+
+model HabitLog {
+  id      String  @id @default(cuid())
+  habitId String
+  date    String  // YYYY-MM-DD
+  done    Boolean @default(false)
+  habit   Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+}
