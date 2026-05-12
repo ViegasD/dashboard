@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderKanban, Target, CalendarDays, Menu, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Target, CalendarDays, Menu, Sun, Moon, Users, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
     { href: "/projects", label: t.nav.projects, icon: FolderKanban },
     { href: "/goals", label: t.nav.goals, icon: Target },
     { href: "/plans", label: t.nav.plans, icon: CalendarDays },
+    { href: "/admin/seed", label: "AI Seed", icon: Sparkles },
+    { href: "/admin/users", label: "Users", icon: Users },
   ];
 
   return (
