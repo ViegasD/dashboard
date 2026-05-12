@@ -271,7 +271,7 @@ function HabitsTab({ weekStart }: { weekStart: Date }) {
                       <span className={`w-2 h-2 rounded-full shrink-0 ${habit.color}`} />
                       <span className="font-medium truncate max-w-32">{habit.title}</span>
                       {habit.startHour !== null && (
-                        <span className="text-xs text-muted-foreground">{habit.startHour}â€“{habit.endHour}</span>
+                        <span className="text-xs text-muted-foreground">{habit.startHour}–{habit.endHour}</span>
                       )}
                     </div>
                   </td>
@@ -435,7 +435,7 @@ export default function PlansPage() {
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <span className="text-sm font-medium min-w-44 text-center">
-                {formatDate(weekStart)} â€“ {formatDate(weekEnd)}
+                {formatDate(weekStart)} – {formatDate(weekEnd)}
               </span>
               <Button variant="outline" size="icon" onClick={nextWeek}>
                 <ChevronRight className="w-4 h-4" />
@@ -540,7 +540,7 @@ export default function PlansPage() {
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <span className="text-sm font-medium min-w-44 text-center">
-                  {formatDate(weekStart)} â€“ {formatDate(weekEnd)}
+                  {formatDate(weekStart)} – {formatDate(weekEnd)}
                 </span>
                 <Button variant="outline" size="icon" onClick={nextWeek}>
                   <ChevronRight className="w-4 h-4" />
@@ -550,116 +550,119 @@ export default function PlansPage() {
                 )}
               </div>
 
-              {/* Header row */}
-              <div className="flex">
-                <div className="w-12 shrink-0" />
-                {DAYS.map((day, i) => {
-                  const dayDate = addDays(weekStart, i);
-                  const isToday = dayDate.toDateString() === new Date().toDateString();
-                  return (
-                    <div key={day} className="flex-1 text-center pb-2">
-                      <div className={`text-xs font-semibold ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                        {day}
+              {/* Combined scrollable grid: sticky header + bi-directional scroll */}
+              <div className="border rounded-lg overflow-auto" style={{ maxHeight: "calc(100vh - 260px)" }}>
+                {/* Sticky day headers */}
+                <div className="flex sticky top-0 z-20 bg-background border-b">
+                  <div className="w-12 shrink-0" />
+                  {DAYS.map((day, i) => {
+                    const dayDate = addDays(weekStart, i);
+                    const isToday = dayDate.toDateString() === new Date().toDateString();
+                    return (
+                      <div key={day} className="flex-1 text-center pb-2 pt-2 min-w-20">
+                        <div className={`text-xs font-semibold ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                          {day}
+                        </div>
+                        <div className={`text-sm font-bold w-7 h-7 mx-auto flex items-center justify-center rounded-full ${
+                          isToday ? "bg-primary text-primary-foreground" : ""
+                        }`}>
+                          {dayDate.getDate()}
+                        </div>
                       </div>
-                      <div className={`text-sm font-bold w-7 h-7 mx-auto flex items-center justify-center rounded-full ${
-                        isToday ? "bg-primary text-primary-foreground" : ""
-                      }`}>
-                        {dayDate.getDate()}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Time grid */}
-              <div className="flex overflow-y-auto border rounded-lg" style={{ maxHeight: "560px" }}>
-                {/* Hour labels */}
-                <div className="w-12 shrink-0 relative" style={{ height: totalHeight }}>
-                  {HOURS.map((h) => (
-                    <div
-                      key={h}
-                      className="absolute right-2 text-[10px] text-muted-foreground -translate-y-2"
-                      style={{ top: (h - START_HOUR) * SLOT_HEIGHT }}
-                    >
-                      {h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h - 12} PM`}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
-                {/* Day columns */}
-                {DAYS.map((day, i) => {
-                  const dayDate = addDays(weekStart, i);
-                  const dateStr = toISODate(dayDate);
-                  const dayTasks = tasks.filter((t) => t.day === i);
-                  // Habits that have hours and include this day
-                  const dayHabits = habits.filter(
-                    (h) => h.days.includes(i) && h.startHour !== null && h.endHour !== null
-                  );
+                {/* Time grid body */}
+                <div className="flex" style={{ height: totalHeight }}>
+                  {/* Sticky hour labels */}
+                  <div className="w-12 shrink-0 relative sticky left-0 bg-background z-10" style={{ height: totalHeight }}>
+                    {HOURS.map((h) => (
+                      <div
+                        key={h}
+                        className="absolute right-2 text-[10px] text-muted-foreground -translate-y-2"
+                        style={{ top: (h - START_HOUR) * SLOT_HEIGHT }}
+                      >
+                        {h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h - 12} PM`}
+                      </div>
+                    ))}
+                  </div>
 
-                  return (
-                    <div key={day} className="flex-1 relative border-l" style={{ height: totalHeight }}>
-                      {HOURS.map((h) => (
-                        <div
-                          key={h}
-                          className="absolute inset-x-0 border-t border-border/50"
-                          style={{ top: (h - START_HOUR) * SLOT_HEIGHT }}
-                        />
-                      ))}
+                  {/* Day columns */}
+                  {DAYS.map((day, i) => {
+                    const dayDate = addDays(weekStart, i);
+                    const dateStr = toISODate(dayDate);
+                    const dayTasks = tasks.filter((task) => task.day === i);
+                    const dayHabits = habits.filter(
+                      (h) => h.days.includes(i) && h.startHour !== null && h.endHour !== null
+                    );
 
-                      {/* Planned tasks */}
-                      {dayTasks.map((t) => {
-                        const top = (t.startHour - START_HOUR) * SLOT_HEIGHT;
-                        const height = (t.endHour - t.startHour) * SLOT_HEIGHT;
-                        return (
+                    return (
+                      <div key={day} className="flex-1 relative border-l min-w-20" style={{ height: totalHeight }}>
+                        {HOURS.map((h) => (
                           <div
-                            key={t.id}
-                            className={`absolute inset-x-0.5 rounded text-white text-xs px-1.5 py-1 overflow-hidden group ${t.color}`}
-                            style={{ top, height }}
-                            title={t.title}
-                          >
-                            <div className="font-medium truncate">{t.title}</div>
-                            <div className="opacity-80">{t.startHour}:00 â€“ {t.endHour}:00</div>
-                            <button
-                              className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/20 rounded"
-                              onClick={() => deleteTask(t.id)}
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        );
-                      })}
+                            key={h}
+                            className="absolute inset-x-0 border-t border-border/50"
+                            style={{ top: (h - START_HOUR) * SLOT_HEIGHT }}
+                          />
+                        ))}
 
-                      {/* Habit blocks */}
-                      {dayHabits.map((h) => {
-                        const top = (h.startHour! - START_HOUR) * SLOT_HEIGHT;
-                        const height = (h.endHour! - h.startHour!) * SLOT_HEIGHT;
-                        const log = logs.find((l) => l.habitId === h.id && l.date === dateStr);
-                        const isDone = log?.done ?? false;
-                        return (
-                          <div
-                            key={h.id}
-                            className={`absolute rounded text-white text-xs px-1.5 py-1 overflow-hidden border-2 border-white/40 ${h.color}`}
-                            style={{ top, height, left: "2px", right: "2px" }}
-                            title={h.title}
-                          >
-                            <div className="font-medium truncate pr-5">{h.title}</div>
-                            <div className="opacity-80">{h.startHour}:00 â€“ {h.endHour}:00</div>
-                            <button
-                              className="absolute top-0.5 right-0.5 p-0.5 hover:bg-white/20 rounded transition-colors"
-                              onClick={() => toggleHabitLog(h.id, dateStr, isDone)}
-                              title={isDone ? t.habits.done : "Mark done"}
+                        {/* Planned tasks */}
+                        {dayTasks.map((task) => {
+                          const top = (task.startHour - START_HOUR) * SLOT_HEIGHT;
+                          const height = (task.endHour - task.startHour) * SLOT_HEIGHT;
+                          return (
+                            <div
+                              key={task.id}
+                              className={`absolute inset-x-0.5 rounded text-white text-xs px-1.5 py-1 overflow-hidden group ${task.color}`}
+                              style={{ top, height }}
+                              title={task.title}
                             >
-                              {isDone
-                                ? <CheckCircle2 className="w-3.5 h-3.5" />
-                                : <Circle className="w-3.5 h-3.5 opacity-70" />}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
+                              <div className="font-medium truncate">{task.title}</div>
+                              <div className="opacity-80">{task.startHour}:00 – {task.endHour}:00</div>
+                              <button
+                                className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/20 rounded"
+                                onClick={() => deleteTask(task.id)}
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        {/* Habit blocks */}
+                        {dayHabits.map((h) => {
+                          const top = (h.startHour! - START_HOUR) * SLOT_HEIGHT;
+                          const height = (h.endHour! - h.startHour!) * SLOT_HEIGHT;
+                          const log = logs.find((l) => l.habitId === h.id && l.date === dateStr);
+                          const isDone = log?.done ?? false;
+                          return (
+                            <div
+                              key={h.id}
+                              className={`absolute rounded text-white text-xs px-1.5 py-1 overflow-hidden border-2 border-white/40 ${h.color}`}
+                              style={{ top, height, left: "2px", right: "2px" }}
+                              title={h.title}
+                            >
+                              <div className="font-medium truncate pr-5">{h.title}</div>
+                              <div className="opacity-80">{h.startHour}:00 – {h.endHour}:00</div>
+                              <button
+                                className="absolute top-0.5 right-0.5 p-0.5 hover:bg-white/20 rounded transition-colors"
+                                onClick={() => toggleHabitLog(h.id, dateStr, isDone)}
+                                title={isDone ? t.habits.done : "Mark done"}
+                              >
+                                {isDone
+                                  ? <CheckCircle2 className="w-3.5 h-3.5" />
+                                  : <Circle className="w-3.5 h-3.5 opacity-70" />}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
               </div>
             </div>
 
