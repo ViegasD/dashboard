@@ -18,7 +18,9 @@ services:
     build:
       context: .
       target: builder
-    command: node node_modules/prisma/build/index.js migrate deploy
+    command: >
+      sh -c "node node_modules/prisma/build/index.js migrate deploy &&
+             node node_modules/ts-node/dist/bin.js --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
     restart: "no"
     depends_on:
       db:

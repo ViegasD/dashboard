@@ -13,30 +13,33 @@ async function main() {
 
   // ── Admin user ─────────────────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash(password, 12);
-  await db.user.upsert({
+  const user = await db.user.upsert({
     where: { email },
     update: { passwordHash },
     create: { email, passwordHash, name: "Admin" },
   });
   console.log(`✓ Admin user: ${email}`);
 
+  // ── Sample data — only seed on first run (no projects yet) ─────────────────
+  const existingProjects = await db.project.count({ where: { ownerId: user.id } });
+  if (existingProjects > 0) {
+    console.log("✓ Sample data already exists, skipping");
+    return;
+  }
+
   // ── Projects ───────────────────────────────────────────────────────────────
-  await db.project.deleteMany();
   await db.project.createMany({
     data: [
-      { name: "Personal Dashboard",   status: "in_progress", tags: ["web", "react"],      dueDate: "2026-05-31", description: "Central hub for projects, goals and plans." },
-      { name: "ComfyUI Lipsync",      status: "in_progress", tags: ["ai", "python"],      dueDate: "2026-06-15", description: "Multi-speaker lipsync node for ComfyUI." },
-      { name: "N8N Automation Suite", status: "in_progress", tags: ["automation", "n8n"], dueDate: "2026-05-20", description: "Unified workflow automation for ISP support." },
-      { name: "VEO3 Video Pipeline",  status: "backlog",     tags: ["ai", "video"],       dueDate: "2026-07-01", description: "Automated K-pop video generation with VEO3." },
-      { name: "ClickUp Migration",    status: "done",        tags: ["productivity"],      dueDate: "2026-04-30", description: "Migrate tasks from legacy system to ClickUp." },
+      { name: "Personal Dashboard",   status: "in_progress", tags: ["web", "react"],      dueDate: "2026-05-31", description: "Central hub for projects, goals and plans.",       ownerId: user.id },
+      { name: "ComfyUI Lipsync",      status: "in_progress", tags: ["ai", "python"],      dueDate: "2026-06-15", description: "Multi-speaker lipsync node for ComfyUI.",          ownerId: user.id },
+      { name: "N8N Automation Suite", status: "in_progress", tags: ["automation", "n8n"], dueDate: "2026-05-20", description: "Unified workflow automation for ISP support.",      ownerId: user.id },
+      { name: "VEO3 Video Pipeline",  status: "backlog",     tags: ["ai", "video"],       dueDate: "2026-07-01", description: "Automated K-pop video generation with VEO3.",      ownerId: user.id },
+      { name: "ClickUp Migration",    status: "done",        tags: ["productivity"],      dueDate: "2026-04-30", description: "Migrate tasks from legacy system to ClickUp.",    ownerId: user.id },
     ],
   });
   console.log("✓ Projects seeded");
 
   // ── Goals ──────────────────────────────────────────────────────────────────
-  await db.milestone.deleteMany();
-  await db.goal.deleteMany();
-
   const goalDefs = [
     {
       title: "Launch Personal Dashboard", category: "Work" as const, progress: 20, targetDate: "2026-05-31",
@@ -78,7 +81,6 @@ async function main() {
   console.log("✓ Goals & milestones seeded");
 
   // ── Planned tasks ──────────────────────────────────────────────────────────
-  await db.plannedTask.deleteMany();
 
   // Use the Monday of the current week as weekStart
   const today = new Date();
