@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { CreateUserForm } from "./CreateUserForm";
+import { DeleteUserButton } from "./DeleteUserButton";
 import {
   Table,
   TableBody,
@@ -52,6 +53,7 @@ export default async function AdminUsersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,11 +64,14 @@ export default async function AdminUsersPage() {
                   <TableCell className="text-muted-foreground text-sm">
                     {u.createdAt.toLocaleDateString()}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <DeleteUserButton id={u.id} email={u.email} />
+                  </TableCell>
                 </TableRow>
               ))}
               {users.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
                     No users yet.
                   </TableCell>
                 </TableRow>
