@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FolderKanban, Target, CalendarDays, Menu, Sun, Moon, Users, Sparkles } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Target, CalendarDays, Menu, Sun, Moon, Users, Sparkles, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useI18n, Locale } from "@/lib/i18n";
 import { useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 
 function NavLinks({ onClick, isAdmin }: { onClick?: () => void; isAdmin: boolean }) {
   const pathname = usePathname();
@@ -77,7 +79,11 @@ function LangToggle() {
   );
 }
 
-export function TopNav({ isAdmin }: { isAdmin: boolean }) {
+export function TopNav({ isAdmin, userName }: { isAdmin: boolean; userName: string }) {
+  const initials = userName
+    ? userName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-4 gap-4">
@@ -96,9 +102,28 @@ export function TopNav({ isAdmin }: { isAdmin: boolean }) {
         <div className="flex items-center gap-2 ml-auto">
           <LangToggle />
           <ThemeToggle />
-          <Avatar className="h-8 w-8">
-            <AvatarFallback>F</AvatarFallback>
-          </Avatar>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<button className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring" />}>
+              <Avatar className="h-8 w-8 cursor-pointer">
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {userName && (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground truncate max-w-[200px]">
+                  {userName}
+                </div>
+              )}
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive cursor-pointer"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Mobile hamburger */}
           <Sheet>

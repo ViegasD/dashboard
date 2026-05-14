@@ -12,10 +12,11 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const email = session?.user?.email?.toLowerCase() ?? "";
   const adminEmails = ADMIN_EMAILS();
   const isAdmin = adminEmails.length === 0 || adminEmails.includes(email);
+  const userName = session?.user?.name ?? session?.user?.email ?? "";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <TopNav isAdmin={isAdmin} />
+      <TopNav isAdmin={isAdmin} userName={userName} />
       <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
         {children}
       </main>
