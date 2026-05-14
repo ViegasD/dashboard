@@ -31,10 +31,16 @@ interface Project {
   myRole: MyRole;
 }
 
-const statusColors: Record<ProjectStatus, string> = {
-  "in-progress": "bg-blue-100 text-blue-800",
-  backlog: "bg-gray-100 text-gray-700",
-  done: "bg-green-100 text-green-800",
+const statusAccent: Record<ProjectStatus, string> = {
+  backlog: "border-t-slate-400",
+  "in-progress": "border-t-blue-500",
+  done: "border-t-emerald-500",
+};
+
+const statusDot: Record<ProjectStatus, string> = {
+  backlog: "bg-slate-400",
+  "in-progress": "bg-blue-500",
+  done: "bg-emerald-500",
 };
 
 function useKanbanColumns() {
@@ -147,12 +153,15 @@ function TableView({ items, onEdit, onDelete, onOpen }: { items: Project[]; onEd
               </div>
             </TableCell>
             <TableCell>
-              <Badge className={statusColors[p.status]}>{p.status}</Badge>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+                <span className={`w-2 h-2 rounded-full ${statusDot[p.status]}`} />
+                {p.status}
+              </span>
             </TableCell>
             <TableCell>
               <div className="flex gap-1 flex-wrap">
-                {p.tags.map((t) => (
-                  <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                {p.tags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
                 ))}
               </div>
             </TableCell>
@@ -195,14 +204,14 @@ function KanbanView({ items, onEdit, onDelete, onStatusChange, onOpen }: {
   const [overCol, setOverCol] = useState<ProjectStatus | null>(null);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="flex gap-4 min-h-[calc(100vh-220px)] overflow-x-auto pb-2">
       {kanbanColumns.map((col) => {
         const colItems = items.filter((p) => p.status === col.key);
         const isOver = overCol === col.key;
         return (
           <div
             key={col.key}
-            className="flex flex-col gap-3"
+            className="flex flex-col w-72 shrink-0"
             onDragOver={(e) => { e.preventDefault(); setOverCol(col.key); }}
             onDragLeave={(e) => {
               if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverCol(null);
@@ -213,63 +222,87 @@ function KanbanView({ items, onEdit, onDelete, onStatusChange, onOpen }: {
               if (draggingId) onStatusChange(draggingId, col.key);
             }}
           >
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{col.label}</h3>
-              <Badge variant="secondary">{colItems.length}</Badge>
+            {/* Column header */}
+            <div className={`flex items-center justify-between px-3 py-2.5 rounded-t-lg border-t-4 bg-muted/50 border border-b-0 ${statusAccent[col.key]}`}>
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${statusDot[col.key]}`} />
+                <span className="text-sm font-semibold">{col.label}</span>
+              </div>
+              <Badge variant="secondary" className="text-xs">{colItems.length}</Badge>
             </div>
-            <div className={`space-y-2 min-h-24 rounded-lg transition-colors ${isOver ? "bg-accent/50 ring-2 ring-primary/30" : ""}`}>
+
+            {/* Cards container */}
+            <div
+              className={`flex-1 overflow-y-auto border border-t-0 rounded-b-lg p-2 space-y-2 transition-colors ${
+                isOver ? "bg-accent/40 ring-2 ring-inset ring-primary/20" : "bg-muted/20"
+              }`}
+              style={{ maxHeight: "calc(100vh - 280px)" }}
+            >
               {colItems.map((p) => (
                 <Card
                   key={p.id}
                   draggable
                   onDragStart={() => setDraggingId(p.id)}
                   onDragEnd={() => { setDraggingId(null); setOverCol(null); }}
-                  className={`hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing select-none ${draggingId === p.id ? "opacity-40" : ""}`}
+                  className={`cursor-grab active:cursor-grabbing select-none shadow-sm hover:shadow-md transition-all ${
+                    draggingId === p.id ? "opacity-40 rotate-1 scale-95" : ""
+                  }`}
                 >
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <button
-                          className="text-sm font-semibold text-left hover:underline hover:text-primary transition-colors"
-                          onClick={() => onOpen(p.id)}
-                        >{p.name}</button>
-                        {p.membersCount > 0 && (
-                          <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground shrink-0">
-                            <Users className="w-3 h-3" />{p.membersCount}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-0.5 shrink-0">
+                  <CardContent className="px-3 py-3 space-y-2">
+                    {/* Title row */}
+                    <div className="flex items-start justify-between gap-1">
+                      <button
+                        className="text-sm font-semibold text-left leading-snug hover:text-primary transition-colors line-clamp-2"
+                        onClick={() => onOpen(p.id)}
+                      >
+                        {p.name}
+                      </button>
+                      <div className="flex gap-0.5 shrink-0 -mt-0.5">
                         {p.myRole !== "viewer" && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(p)}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => onEdit(p)}>
                             <Pencil className="w-3 h-3" />
                           </Button>
                         )}
                         {(p.myRole === "owner" || p.myRole === null) && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDelete(p.id)}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => onDelete(p.id)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         )}
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 space-y-2">
-                    <p className="text-xs text-muted-foreground">{p.description}</p>
-                    <div className="flex items-center justify-between">
+
+                    {/* Description */}
+                    {p.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                    )}
+
+                    {/* Tags */}
+                    {p.tags.length > 0 && (
                       <div className="flex gap-1 flex-wrap">
-                        {p.tags.map((t) => (
-                          <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                        {p.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">{tag}</Badge>
                         ))}
                       </div>
-                      <span className="text-xs text-muted-foreground">{p.dueDate ?? ""}</span>
+                    )}
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-0.5">
+                      {p.membersCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Users className="w-3 h-3" />{p.membersCount}
+                        </span>
+                      ) : <span />}
+                      {p.dueDate && (
+                        <span className="text-[10px] text-muted-foreground">{p.dueDate}</span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
               ))}
               {colItems.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6 border-2 border-dashed rounded-md">
-                  {t.projects.noItems}
-                </p>
+                <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed rounded-lg">
+                  <p className="text-xs text-muted-foreground">{t.projects.noItems}</p>
+                </div>
               )}
             </div>
           </div>
@@ -282,7 +315,7 @@ function KanbanView({ items, onEdit, onDelete, onStatusChange, onOpen }: {
 export default function ProjectsPage() {
   const { t } = useI18n();
   const router = useRouter();
-  const [view, setView] = useState<"table" | "kanban">("table");
+  const [view, setView] = useState<"table" | "kanban">("kanban");
   const [search, setSearch] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -422,17 +455,17 @@ export default function ProjectsPage() {
       </Sheet>
 
       {/* Content */}
-      <Card>
-        <CardContent className="pt-6">
-          {loading ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">{t.projects.loading}</p>
-          ) : view === "table" ? (
+      {loading ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">{t.projects.loading}</p>
+      ) : view === "table" ? (
+        <Card>
+          <CardContent className="pt-6">
             <TableView items={projects} onEdit={openEdit} onDelete={handleDelete} onOpen={openDetail} />
-          ) : (
-            <KanbanView items={projects} onEdit={openEdit} onDelete={handleDelete} onStatusChange={handleStatusChange} onOpen={openDetail} />
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <KanbanView items={projects} onEdit={openEdit} onDelete={handleDelete} onStatusChange={handleStatusChange} onOpen={openDetail} />
+      )}
     </div>
   );
 }
