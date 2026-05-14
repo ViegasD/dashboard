@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -348,6 +348,8 @@ export default function PlansPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newTask, setNewTask] = useState({ title: "", day: 0, startHour: 9, endHour: 10, color: "bg-blue-500" });
+  const [selectedDay, setSelectedDay] = useState(() => new Date());
+  const gridScrollRef = useRef<HTMLDivElement>(null);
 
   function loadPlanner(ws: Date) {
     setPlannerLoading(true);
@@ -358,7 +360,35 @@ export default function PlansPage() {
     ]).then(([p, h, l]) => { setTasks(p); setHabits(h); setLogs(l); setPlannerLoading(false); });
   }
 
-  useEffect(() => { loadPlanner(weekStart); }, [weekStart]);
+  const plannerWeekStart = getWeekStart(selectedDay);
+  const plannerWeekKey = toISODate(plannerWeekStart);
+  const dayIndex = (selectedDay.getDay() + 6) % 7; // 0=Mon … 6=Sun
+  const isSelectedToday = selectedDay.toDateString() === new Date().toDateString();
+
+  useEffect(() => { loadPlanner(plannerWeekStart); }, [plannerWeekKey]);
+
+  // Scroll to 7 AM when day changes
+  useEffect(() => {
+    const el = gridScrollRef.current;
+    if (el) el.scrollTop = 7 * SLOT_HEIGHT;
+  }, [selectedDay]);
+
+  // Scroll past top → prev day; past bottom → next day
+  useEffect(() => {
+    const el = gridScrollRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      if (e.deltaY < 0 && el.scrollTop === 0) {
+        e.preventDefault();
+        setSelectedDay((d) => addDays(d, -1));
+      } else if (e.deltaY > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 2) {
+        e.preventDefault();
+        setSelectedDay((d) => addDays(d, 1));
+      }
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
 
   const weekEnd = addDays(weekStart, 6);
   const isCurrentWeek = getWeekStart(new Date()).getTime() === weekStart.getTime();
@@ -366,8 +396,11 @@ export default function PlansPage() {
 
   function prevWeek() { setWeekStart((d) => addDays(d, -7)); }
   function nextWeek() { setWeekStart((d) => addDays(d, 7)); }
+  function prevDay() { setSelectedDay((d) => addDays(d, -1)); }
+  function nextDay() { setSelectedDay((d) => addDays(d, 1)); }
   function goToday() {
     setWeekStart(getWeekStart(new Date()));
+    setSelectedDay(new Date());
     setCalDate(new Date());
   }
 
@@ -377,7 +410,7 @@ export default function PlansPage() {
     const res = await fetch("/api/plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newTask, weekStart: toISODate(weekStart) }),
+      body: JSON.stringify({ ...newTask, weekStart: toISODate(plannerWeekStart) }),
     });
     setSaving(false);
     if (res.ok) {
@@ -428,7 +461,7 @@ export default function PlansPage() {
           </p>
         </div>
         {tab === "planner" && (
-          <Button size="sm" onClick={() => setSheetOpen(true)}>
+          <Button size="sm" onClick={() => { setNewTask((f) => ({ ...f, day: dayIndex })); setSheetOpen(true); }}>
             <Plus className="w-4 h-4 mr-1" /> {t.plans.newTask}
           </Button>
         )}
@@ -561,87 +594,85 @@ export default function PlansPage() {
           <div className="flex gap-6 flex-col lg:flex-row">
             {/* Weekly grid */}
             <div className="flex-1 space-y-4 min-w-0">
-              {/* Week navigation */}
-              <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon" onClick={prevWeek}>
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm font-medium min-w-44 text-center">
-                  {formatDate(weekStart)} – {formatDate(weekEnd)}
-                </span>
-                <Button variant="outline" size="icon" onClick={nextWeek}>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                {!isCurrentWeek && (
-                  <Button variant="ghost" size="sm" onClick={goToday}>{t.plans.today}</Button>
-                )}
-              </div>
-
-              {/* Combined scrollable grid: sticky header + bi-directional scroll */}
-              <div className="relative border rounded-lg overflow-auto" style={{ maxHeight: "calc(100vh - 260px)" }}>
+              {/* Day view: single day with full 24-hour vertical scroll */}
+              <div
+                ref={gridScrollRef}
+                className="relative border rounded-lg overflow-y-auto"
+                style={{ maxHeight: "calc(100vh - 220px)" }}
+              >
                 {plannerLoading && (
                   <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-lg">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
                 )}
-                {/* Sticky day headers */}
-                <div className="flex sticky top-0 z-20 bg-background border-b">
-                  <div className="w-12 shrink-0" />
-                  {DAYS.map((day, i) => {
-                    const dayDate = addDays(weekStart, i);
-                    const isToday = dayDate.toDateString() === new Date().toDateString();
-                    return (
-                      <div key={day} className="flex-1 text-center pb-2 pt-2 min-w-20">
-                        <div className={`text-xs font-semibold ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                          {day}
-                        </div>
-                        <div className={`text-sm font-bold w-7 h-7 mx-auto flex items-center justify-center rounded-full ${
-                          isToday ? "bg-primary text-primary-foreground" : ""
-                        }`}>
-                          {dayDate.getDate()}
-                        </div>
+
+                {/* Sticky day header with prev/next navigation */}
+                <div className="sticky top-0 z-20 bg-background border-b">
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <Button variant="ghost" size="icon" onClick={prevDay}>
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <div className="text-center">
+                      <div className={`text-xs font-semibold uppercase ${isSelectedToday ? "text-primary" : "text-muted-foreground"}`}>
+                        {selectedDay.toLocaleDateString("en-US", { weekday: "long" })}
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold ${isSelectedToday ? "bg-primary text-primary-foreground" : ""}`}>
+                          {selectedDay.getDate()}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {selectedDay.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={nextDay}>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {!isSelectedToday && (
+                    <div className="pb-1.5 flex justify-center">
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={goToday}>
+                        {t.plans.today}
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
-                {/* Time grid body */}
-                <div className="flex" style={{ height: totalHeight }}>
-                  {/* Sticky hour labels */}
-                  <div className="w-12 shrink-0 relative sticky left-0 bg-background z-10" style={{ height: totalHeight }}>
-                    {HOURS.map((h) => (
+                {/* 24-hour time grid */}
+                <div className="flex" style={{ height: 24 * SLOT_HEIGHT }}>
+                  {/* Hour labels */}
+                  <div className="w-12 shrink-0 relative sticky left-0 bg-background z-10" style={{ height: 24 * SLOT_HEIGHT }}>
+                    {Array.from({ length: 24 }, (_, h) => (
                       <div
                         key={h}
                         className="absolute right-2 text-[10px] text-muted-foreground -translate-y-2"
-                        style={{ top: (h - START_HOUR) * SLOT_HEIGHT }}
+                        style={{ top: h * SLOT_HEIGHT }}
                       >
-                        {h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h - 12} PM`}
+                        {h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`}
                       </div>
                     ))}
                   </div>
 
-                  {/* Day columns */}
-                  {DAYS.map((day, i) => {
-                    const dayDate = addDays(weekStart, i);
-                    const dateStr = toISODate(dayDate);
-                    const dayTasks = tasks.filter((task) => task.day === i);
+                  {/* Single day column */}
+                  {(() => {
+                    const dateStr = toISODate(selectedDay);
+                    const dayTasks = tasks.filter((task) => task.day === dayIndex);
                     const dayHabits = habits.filter(
-                      (h) => h.days.includes(i) && h.startHour !== null && h.endHour !== null
+                      (h) => h.days.includes(dayIndex) && h.startHour !== null && h.endHour !== null
                     );
-
                     return (
-                      <div key={day} className="flex-1 relative border-l min-w-20" style={{ height: totalHeight }}>
-                        {HOURS.map((h) => (
+                      <div className="flex-1 relative border-l" style={{ height: 24 * SLOT_HEIGHT }}>
+                        {Array.from({ length: 24 }, (_, h) => (
                           <div
                             key={h}
                             className="absolute inset-x-0 border-t border-border/50"
-                            style={{ top: (h - START_HOUR) * SLOT_HEIGHT }}
+                            style={{ top: h * SLOT_HEIGHT }}
                           />
                         ))}
 
                         {/* Planned tasks */}
                         {dayTasks.map((task) => {
-                          const top = (task.startHour - START_HOUR) * SLOT_HEIGHT;
+                          const top = task.startHour * SLOT_HEIGHT;
                           const height = (task.endHour - task.startHour) * SLOT_HEIGHT;
                           return (
                             <div
@@ -665,7 +696,7 @@ export default function PlansPage() {
 
                         {/* Habit blocks */}
                         {dayHabits.map((h) => {
-                          const top = (h.startHour! - START_HOUR) * SLOT_HEIGHT;
+                          const top = h.startHour! * SLOT_HEIGHT;
                           const height = (h.endHour! - h.startHour!) * SLOT_HEIGHT;
                           const log = logs.find((l) => l.habitId === h.id && l.date === dateStr);
                           const isDone = log?.done ?? false;
@@ -692,7 +723,7 @@ export default function PlansPage() {
                         })}
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
               </div>
             </div>
