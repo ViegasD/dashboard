@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { CreateUserForm } from "./CreateUserForm";
 import {
   Table,
@@ -13,7 +15,18 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users } from "lucide-react";
 
+function isAdmin(email: string | null | undefined) {
+  const list = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return list.length === 0 || list.includes((email ?? "").toLowerCase());
+}
+
 export default async function AdminUsersPage() {
+  const session = await auth();
+  if (!isAdmin(session?.user?.email)) redirect("/");
+
   const users = await db.user.findMany({
     select: { id: true, email: true, name: true, createdAt: true },
     orderBy: { createdAt: "asc" },

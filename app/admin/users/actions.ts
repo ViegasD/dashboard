@@ -1,10 +1,21 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
+function isAdmin(email: string | null | undefined) {
+  const list = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return list.length === 0 || list.includes((email ?? "").toLowerCase());
+}
+
 export async function createUser(formData: FormData) {
+  const session = await auth();
+  if (!isAdmin(session?.user?.email)) return { error: "Unauthorized." };
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const name = (formData.get("name") as string)?.trim() || null;
   const password = formData.get("password") as string;
@@ -31,6 +42,8 @@ export async function createUser(formData: FormData) {
 }
 
 export async function deleteUser(id: string) {
+  const session = await auth();
+  if (!isAdmin(session?.user?.email)) return;
   await db.user.delete({ where: { id } });
   revalidatePath("/admin/users");
 }
