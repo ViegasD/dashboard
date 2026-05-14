@@ -11,17 +11,27 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
 } from "@/components/ui/sheet";
 import {
-  ArrowLeft, Pencil, Plus, CheckCircle2, Circle, Trash2,
+  ArrowLeft, Pencil, Plus, CheckCircle2, Circle, Trash2, Share2, Users, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 
 type ProjectStatus = "backlog" | "in-progress" | "done";
+type MyRole = "owner" | "editor" | "viewer" | null;
 
 interface ProjectTask {
   id: string;
   title: string;
   done: boolean;
+}
+
+interface Member {
+  id: string;
+  userId: string;
+  name: string | null;
+  email: string;
+  role: "editor" | "viewer";
+  addedAt: string;
 }
 
 interface Project {
@@ -32,6 +42,8 @@ interface Project {
   dueDate: string | null;
   description: string | null;
   tasks: ProjectTask[];
+  myRole: MyRole;
+  members: Member[];
 }
 
 const statusColors: Record<ProjectStatus, string> = {
@@ -135,6 +147,142 @@ function EditProjectForm({
   );
 }
 
+function ShareSheet({
+  projectId,
+  members,
+  onMembersChange,
+}: {
+  projectId: string;
+  members: Member[];
+  onMembersChange: (members: Member[]) => void;
+}) {
+  const { t } = useI18n();
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"editor" | "viewer">("editor");
+  const [adding, setAdding] = useState(false);
+
+  async function addMember(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setAdding(true);
+    const res = await fetch(`/api/projects/${projectId}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), role }),
+    });
+    if (res.ok) {
+      const member = await res.json();
+      onMembersChange([...members, member]);
+      setEmail("");
+      toast.success(t.projects.memberAdded);
+    } else {
+      const data = await res.json().catch(() => null);
+      if (data?.error === "not_found") toast.error(t.projects.notFound);
+      else if (data?.error === "already_member") toast.error(t.projects.alreadyMember);
+      else if (data?.error === "invite_yourself") toast.error(t.projects.inviteYourself);
+      else toast.error("Failed to add member");
+    }
+    setAdding(false);
+  }
+
+  async function changeRole(userId: string, newRole: "editor" | "viewer") {
+    const res = await fetch(`/api/projects/${projectId}/members/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (res.ok) {
+      onMembersChange(members.map((m) => m.userId === userId ? { ...m, role: newRole } : m));
+      toast.success(t.projects.roleChanged);
+    } else {
+      toast.error("Failed to update role");
+    }
+  }
+
+  async function removeMember(userId: string) {
+    const res = await fetch(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" });
+    if (res.ok || res.status === 204) {
+      onMembersChange(members.filter((m) => m.userId !== userId));
+      toast.success(t.projects.memberRemoved);
+    } else {
+      toast.error("Failed to remove member");
+    }
+  }
+
+  return (
+    <>
+      <SheetHeader>
+        <SheetTitle className="flex items-center gap-2">
+          <Users className="w-4 h-4" />
+          {t.projects.shareProject}
+        </SheetTitle>
+      </SheetHeader>
+
+      <form onSubmit={addMember} className="space-y-3 mt-4">
+        <label className="text-sm font-medium">{t.projects.inviteByEmail}</label>
+        <div className="flex gap-2">
+          <Input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t.projects.emailPlaceholder}
+            className="flex-1"
+          />
+          <select
+            className="border rounded-md px-2 py-2 text-sm bg-background"
+            value={role}
+            onChange={(e) => setRole(e.target.value as "editor" | "viewer")}
+          >
+            <option value="editor">{t.projects.roleEditor}</option>
+            <option value="viewer">{t.projects.roleViewer}</option>
+          </select>
+          <Button type="submit" size="sm" disabled={adding}>
+            {adding ? t.projects.adding : t.projects.addMember}
+          </Button>
+        </div>
+      </form>
+
+      <div className="mt-6 space-y-2">
+        <p className="text-sm font-medium">{t.projects.members}</p>
+        {members.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center border-2 border-dashed rounded-md">
+            {t.projects.noMembers}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {members.map((m) => (
+              <li key={m.userId} className="flex items-center gap-3 rounded-md border px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{m.name ?? m.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                </div>
+                <select
+                  className="border rounded-md px-2 py-1 text-xs bg-background"
+                  value={m.role}
+                  onChange={(e) => changeRole(m.userId, e.target.value as "editor" | "viewer")}
+                  aria-label={t.projects.changeRole}
+                >
+                  <option value="editor">{t.projects.roleEditor}</option>
+                  <option value="viewer">{t.projects.roleViewer}</option>
+                </select>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                  onClick={() => removeMember(m.userId)}
+                  title={t.projects.removeMember}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -143,6 +291,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -154,6 +303,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       })
       .then((data) => { if (data) setProject(data); setLoading(false); });
   }, [id, router]);
+
+  function updateMembers(members: Member[]) {
+    setProject((p) => p ? { ...p, members } : p);
+  }
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
@@ -247,28 +400,30 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               {project.tags.map((tag) => (
                 <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
               ))}
+              {project.members.length > 0 && (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Users className="w-3.5 h-3.5" />{project.members.length + 1}
+                </span>
+              )}
             </div>
             {project.description && (
               <p className="text-sm text-muted-foreground">{project.description}</p>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil className="w-4 h-4 mr-1.5" />
-            {t.projects.detailEdit}
-          </Button>
-        </div>
-
-        {/* Progress bar */}
-        {project.tasks.length > 0 && (
-          <div className="flex items-center gap-3">
-            <Progress value={progress} className="h-2 flex-1" />
-            <span className="text-sm font-medium tabular-nums w-10 text-right">{progress}%</span>
-            <span className="text-xs text-muted-foreground">
-              {doneTasks.length}/{project.tasks.length} {t.projects.taskProgress}
-            </span>
+          <div className="flex gap-2">
+            {(project.myRole === "owner" || project.myRole === null) && (
+              <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+                <Share2 className="w-4 h-4 mr-1.5" />
+                {t.projects.share}
+              </Button>
+            )}
+            {project.myRole !== "viewer" && (
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil className="w-4 h-4 mr-1.5" />
+                {t.projects.detailEdit}
+              </Button>
+            )}
           </div>
-        )}
-      </div>
 
       {/* Edit sheet */}
       <Sheet open={editOpen} onOpenChange={setEditOpen}>
@@ -278,6 +433,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             project={project}
             onSave={(updated) => { setProject(updated); setEditOpen(false); }}
             onClose={() => setEditOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
+
+      {/* Share sheet */}
+      <Sheet open={shareOpen} onOpenChange={setShareOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-6">
+          <ShareSheet
+            projectId={project.id}
+            members={project.members}
+            onMembersChange={updateMembers}
           />
         </SheetContent>
       </Sheet>
@@ -300,8 +466,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder={t.projects.taskPlaceholder}
               className="flex-1"
+              disabled={project.myRole === "viewer"}
             />
-            <Button type="submit" size="sm" disabled={adding || !newTitle.trim()}>
+            <Button type="submit" size="sm" disabled={adding || !newTitle.trim() || project.myRole === "viewer"}>
               <Plus className="w-4 h-4" />
             </Button>
           </form>
@@ -330,6 +497,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                     onClick={() => deleteTask(task.id)}
                     title={t.projects.deleteTask}
+                    hidden={project.myRole === "viewer"}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -339,7 +507,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           )}
         </div>
 
-        {/* Done group */}
+        {/* Done group */}}
         <div className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             {t.projects.done}
@@ -370,6 +538,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                     onClick={() => deleteTask(task.id)}
                     title={t.projects.deleteTask}
+                    hidden={project.myRole === "viewer"}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

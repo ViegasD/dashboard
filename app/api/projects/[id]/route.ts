@@ -14,24 +14,59 @@ function toPrismaStatus(status: string): PrismaStatus {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+async function loadProject(id: string) {
+  return db.project.findUnique({
+    where: { id },
+    include: {
+      tasks: { orderBy: { createdAt: "asc" } },
+      members: { include: { user: { select: { id: true, name: true, email: true } } } },
+    },
+  });
+}
+
 export async function GET(_req: Request, ctx: RouteContext) {
   const session = await auth();
   if (!session) return new Response(null, { status: 401 });
 
+  const userId = session.user!.id!;
   const { id } = await ctx.params;
-  const project = await db.project.findUnique({
-    where: { id },
-    include: { tasks: { orderBy: { createdAt: "asc" } } },
-  });
+  const project = await loadProject(id);
   if (!project) return new Response(null, { status: 404 });
-  return Response.json({ ...project, status: toApiStatus(project.status) });
+
+  const isOwner = project.ownerId === null || project.ownerId === userId;
+  const membership = project.members.find((m) => m.userId === userId);
+  if (!isOwner && !membership) return new Response(null, { status: 403 });
+
+  const myRole = isOwner ? "owner" : membership!.role;
+  const members = project.members.map((m) => ({
+    id: m.id,
+    userId: m.userId,
+    name: m.user.name,
+    email: m.user.email,
+    role: m.role,
+    addedAt: m.addedAt,
+  }));
+
+  return Response.json({ ...project, status: toApiStatus(project.status), myRole, members });
 }
 
 export async function PATCH(request: Request, ctx: RouteContext) {
   const session = await auth();
   if (!session) return new Response(null, { status: 401 });
 
+  const userId = session.user!.id!;
   const { id } = await ctx.params;
+  const project = await db.project.findUnique({
+    where: { id },
+    include: { members: { select: { userId: true, role: true } } },
+  });
+  if (!project) return new Response(null, { status: 404 });
+
+  const isOwner = project.ownerId === null || project.ownerId === userId;
+  const membership = project.members.find((m) => m.userId === userId);
+  const canEdit = isOwner || membership?.role === "editor";
+  if (!canEdit) return new Response(null, { status: 403 });
+
   const body = await request.json().catch(() => null);
   const parsed = ProjectPatchSchema.safeParse(body);
   if (!parsed.success) {
@@ -39,26 +74,25 @@ export async function PATCH(request: Request, ctx: RouteContext) {
   }
 
   const { status, ...rest } = parsed.data;
-  try {
-    const project = await db.project.update({
-      where: { id },
-      data: { ...rest, ...(status ? { status: toPrismaStatus(status) } : {}) },
-    });
-    return Response.json({ ...project, status: toApiStatus(project.status) });
-  } catch {
-    return new Response(null, { status: 404 });
-  }
+  const updated = await db.project.update({
+    where: { id },
+    data: { ...rest, ...(status ? { status: toPrismaStatus(status) } : {}) },
+  });
+  return Response.json({ ...updated, status: toApiStatus(updated.status) });
 }
 
 export async function DELETE(_req: Request, ctx: RouteContext) {
   const session = await auth();
   if (!session) return new Response(null, { status: 401 });
 
+  const userId = session.user!.id!;
   const { id } = await ctx.params;
-  try {
-    await db.project.delete({ where: { id } });
-    return new Response(null, { status: 204 });
-  } catch {
-    return new Response(null, { status: 404 });
-  }
+  const project = await db.project.findUnique({ where: { id }, select: { ownerId: true } });
+  if (!project) return new Response(null, { status: 404 });
+
+  const isOwner = project.ownerId === null || project.ownerId === userId;
+  if (!isOwner) return new Response(null, { status: 403 });
+
+  await db.project.delete({ where: { id } });
+  return new Response(null, { status: 204 });
 }

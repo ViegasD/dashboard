@@ -12,11 +12,13 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
 } from "@/components/ui/sheet";
-import { LayoutList, Kanban, Search, Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { LayoutList, Kanban, Search, Plus, Pencil, Trash2, ExternalLink, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 
 type ProjectStatus = "backlog" | "in-progress" | "done";
+
+type MyRole = "owner" | "editor" | "viewer" | null;
 
 interface Project {
   id: string;
@@ -25,6 +27,8 @@ interface Project {
   tags: string[];
   dueDate: string | null;
   description: string | null;
+  membersCount: number;
+  myRole: MyRole;
 }
 
 const statusColors: Record<ProjectStatus, string> = {
@@ -130,10 +134,17 @@ function TableView({ items, onEdit, onDelete, onOpen }: { items: Project[]; onEd
         {items.map((p) => (
           <TableRow key={p.id}>
             <TableCell>
-              <button
-                className="font-medium text-left hover:underline hover:text-primary transition-colors"
-                onClick={() => onOpen(p.id)}
-              >{p.name}</button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="font-medium text-left hover:underline hover:text-primary transition-colors"
+                  onClick={() => onOpen(p.id)}
+                >{p.name}</button>
+                {p.membersCount > 0 && (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users className="w-3 h-3" />{p.membersCount}
+                  </span>
+                )}
+              </div>
             </TableCell>
             <TableCell>
               <Badge className={statusColors[p.status]}>{p.status}</Badge>
@@ -152,12 +163,16 @@ function TableView({ items, onEdit, onDelete, onOpen }: { items: Project[]; onEd
                 <Button variant="ghost" size="icon" className="h-7 w-7" title={t.projects.openProject} onClick={() => onOpen(p.id)}>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(p)}>
-                  <Pencil className="w-3.5 h-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDelete(p.id)}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+                {p.myRole !== "viewer" && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(p)}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                {(p.myRole === "owner" || p.myRole === null) && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDelete(p.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
               </div>
             </TableCell>
           </TableRow>
@@ -213,17 +228,28 @@ function KanbanView({ items, onEdit, onDelete, onStatusChange, onOpen }: {
                 >
                   <CardHeader className="pb-2 pt-4 px-4">
                     <div className="flex items-start justify-between gap-2">
-                      <button
-                        className="text-sm font-semibold text-left hover:underline hover:text-primary transition-colors"
-                        onClick={() => onOpen(p.id)}
-                      >{p.name}</button>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <button
+                          className="text-sm font-semibold text-left hover:underline hover:text-primary transition-colors"
+                          onClick={() => onOpen(p.id)}
+                        >{p.name}</button>
+                        {p.membersCount > 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground shrink-0">
+                            <Users className="w-3 h-3" />{p.membersCount}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex gap-0.5 shrink-0">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(p)}>
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDelete(p.id)}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                        {p.myRole !== "viewer" && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(p)}>
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                        )}
+                        {(p.myRole === "owner" || p.myRole === null) && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDelete(p.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardHeader>
