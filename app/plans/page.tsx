@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
 } from "@/components/ui/sheet";
-import { ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle2, Circle, LayoutGrid, Repeat2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle2, Circle, LayoutGrid, Repeat2, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -61,6 +61,7 @@ function HabitsTab({ weekStart }: { weekStart: Date }) {
   const { t } = useI18n();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newHabit, setNewHabit] = useState({
@@ -68,10 +69,11 @@ function HabitsTab({ weekStart }: { weekStart: Date }) {
   });
 
   function loadData(ws: Date) {
+    setLoadingData(true);
     Promise.all([
       fetch("/api/habits").then((r) => r.ok ? r.json() : []),
       fetch(`/api/habits/logs?weekStart=${toISODate(ws)}`).then((r) => r.ok ? r.json() : []),
-    ]).then(([h, l]) => { setHabits(h); setLogs(l); });
+    ]).then(([h, l]) => { setHabits(h); setLogs(l); setLoadingData(false); });
   }
 
   useEffect(() => { loadData(weekStart); }, [weekStart]);
@@ -234,7 +236,11 @@ function HabitsTab({ weekStart }: { weekStart: Date }) {
       </Sheet>
 
       {/* Weekly habit grid */}
-      {habits.length === 0 ? (
+      {loadingData ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : habits.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-12 border-2 border-dashed rounded-md">
           {t.habits.noHabits}
         </p>
@@ -329,16 +335,18 @@ export default function PlansPage() {
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
+  const [plannerLoading, setPlannerLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newTask, setNewTask] = useState({ title: "", day: 0, startHour: 9, endHour: 10, color: "bg-blue-500" });
 
   function loadPlanner(ws: Date) {
+    setPlannerLoading(true);
     Promise.all([
       fetch(`/api/plans?weekStart=${toISODate(ws)}`).then((r) => r.ok ? r.json() : []),
       fetch("/api/habits").then((r) => r.ok ? r.json() : []),
       fetch(`/api/habits/logs?weekStart=${toISODate(ws)}`).then((r) => r.ok ? r.json() : []),
-    ]).then(([p, h, l]) => { setTasks(p); setHabits(h); setLogs(l); });
+    ]).then(([p, h, l]) => { setTasks(p); setHabits(h); setLogs(l); setPlannerLoading(false); });
   }
 
   useEffect(() => { loadPlanner(weekStart); }, [weekStart]);
@@ -551,7 +559,12 @@ export default function PlansPage() {
               </div>
 
               {/* Combined scrollable grid: sticky header + bi-directional scroll */}
-              <div className="border rounded-lg overflow-auto" style={{ maxHeight: "calc(100vh - 260px)" }}>
+              <div className="relative border rounded-lg overflow-auto" style={{ maxHeight: "calc(100vh - 260px)" }}>
+                {plannerLoading && (
+                  <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-lg">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
                 {/* Sticky day headers */}
                 <div className="flex sticky top-0 z-20 bg-background border-b">
                   <div className="w-12 shrink-0" />
