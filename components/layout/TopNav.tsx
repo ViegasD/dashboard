@@ -11,7 +11,7 @@ import { useTheme } from "next-themes";
 import { useI18n, Locale } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 
-function NavLinks({ onClick }: { onClick?: () => void }) {
+function NavLinks({ onClick, isAdmin }: { onClick?: () => void; isAdmin: boolean }) {
   const pathname = usePathname();
   const { t } = useI18n();
 
@@ -20,8 +20,8 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
     { href: "/projects", label: t.nav.projects, icon: FolderKanban },
     { href: "/goals", label: t.nav.goals, icon: Target },
     { href: "/plans", label: t.nav.plans, icon: CalendarDays },
-    { href: "/admin/seed", label: "AI Seed", icon: Sparkles },
-    { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/seed", label: "AI Seed", icon: Sparkles },
+    ...(isAdmin ? [{ href: "/admin/users", label: "Users", icon: Users }] : []),
   ];
 
   return (
@@ -77,7 +77,7 @@ function LangToggle() {
   );
 }
 
-export function TopNav() {
+export function TopNav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-4 gap-4">
@@ -89,7 +89,7 @@ export function TopNav() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1 flex-1">
-          <NavLinks />
+          <NavLinks isAdmin={isAdmin} />
         </nav>
 
         {/* Right side */}
@@ -111,7 +111,7 @@ export function TopNav() {
             />
             <SheetContent side="left" className="w-64 pt-10">
               <nav className="flex flex-col gap-1">
-                <NavLinks />
+                <NavLinks isAdmin={isAdmin} />
               </nav>
             </SheetContent>
           </Sheet>

@@ -1,11 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
@@ -25,9 +20,13 @@ export default auth((req) => {
   }
 
   // Restrict /admin routes to allowlisted emails
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin/users")) {
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
     const email = req.auth.user?.email?.toLowerCase() ?? "";
-    if (!ADMIN_EMAILS.includes(email)) {
+    if (adminEmails.length > 0 && !adminEmails.includes(email)) {
       return NextResponse.redirect(new URL("/", req.url));
     }
   }
