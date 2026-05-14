@@ -424,6 +424,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Progress bar */}
+        {project.tasks.length > 0 && (
+          <div className="flex items-center gap-3">
+            <Progress value={progress} className="h-2 flex-1" />
+            <span className="text-sm font-medium tabular-nums w-10 text-right">{progress}%</span>
+            <span className="text-xs text-muted-foreground">
+              {doneTasks.length}/{project.tasks.length} {t.projects.taskProgress}
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Edit sheet */}
       <Sheet open={editOpen} onOpenChange={setEditOpen}>
