@@ -514,7 +514,7 @@ export default function PlansPage() {
               <Calendar
                 mode="single"
                 selected={calDate}
-                onSelect={(d) => { setCalDate(d); if (d) setWeekStart(getWeekStart(d)); }}
+                onSelect={(d) => { setCalDate(d); if (d) { setWeekStart(getWeekStart(d)); setSelectedDay(d); } }}
                 className="rounded-md"
               />
             </CardContent>
@@ -739,7 +739,7 @@ export default function PlansPage() {
                   selected={calDate}
                   onSelect={(d) => {
                     setCalDate(d);
-                    if (d) setWeekStart(getWeekStart(d));
+                    if (d) { setWeekStart(getWeekStart(d)); setSelectedDay(d); }
                   }}
                   className="rounded-md"
                 />
