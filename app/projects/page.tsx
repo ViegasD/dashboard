@@ -315,8 +315,8 @@ export default function ProjectsPage() {
         name: form.name,
         status: form.status,
         tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-        dueDate: form.dueDate || null,
-        description: form.description || null,
+        ...(form.dueDate ? { dueDate: form.dueDate } : {}),
+        ...(form.description ? { description: form.description } : {}),
       }),
     });
     if (res.ok) { closeSheet(); fetchProjects(); toast.success("Project created"); }
@@ -332,8 +332,8 @@ export default function ProjectsPage() {
         name: form.name,
         status: form.status,
         tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-        dueDate: form.dueDate || null,
-        description: form.description || null,
+        ...(form.dueDate ? { dueDate: form.dueDate } : {}),
+        ...(form.description ? { description: form.description } : {}),
       }),
     });
     if (res.ok) { closeSheet(); fetchProjects(); toast.success("Project updated"); }
