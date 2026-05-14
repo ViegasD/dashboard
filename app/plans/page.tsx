@@ -695,7 +695,6 @@ export default function PlansPage() {
                   })}
                 </div>
               </div>
-              </div>
             </div>
 
             {/* Mini calendar sidebar */}

@@ -13,12 +13,14 @@ datasource db {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime  @default(now())
-  sessions     Session[]
+  id             String          @id @default(cuid())
+  email          String          @unique
+  passwordHash   String
+  name           String?
+  createdAt      DateTime        @default(now())
+  sessions       Session[]
+  ownedProjects  Project[]       @relation("ProjectOwner")
+  memberships    ProjectMember[]
 }
 
 model Session {
@@ -32,21 +34,41 @@ model Session {
 // ── Projects ──────────────────────────────────────────────────────────────────
 
 model Project {
-  id          String        @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
-  status      ProjectStatus @default(backlog)
+  status      ProjectStatus   @default(backlog)
   tags        String[]
   dueDate     String?
   description String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  ownerId     String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  owner       User?           @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   tasks       ProjectTask[]
+  members     ProjectMember[]
 }
 
 enum ProjectStatus {
   backlog
   in_progress
   done
+}
+
+enum ProjectRole {
+  editor
+  viewer
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectRole
+  addedAt   DateTime    @default(now())
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
 }
 
 model ProjectTask {

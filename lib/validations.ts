@@ -15,8 +15,19 @@ export const ProjectCreateSchema = z.object({
 
 export const ProjectPatchSchema = ProjectCreateSchema.partial();
 
+export const ProjectMemberAddSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["editor", "viewer"]),
+});
+
+export const ProjectMemberPatchSchema = z.object({
+  role: z.enum(["editor", "viewer"]),
+});
+
 export type ProjectCreateInput = z.infer<typeof ProjectCreateSchema>;
 export type ProjectPatchInput = z.infer<typeof ProjectPatchSchema>;
+export type ProjectMemberAddInput = z.infer<typeof ProjectMemberAddSchema>;
+export type ProjectMemberPatchInput = z.infer<typeof ProjectMemberPatchSchema>;
 
 // ── Goals ──────────────────────────────────────────────────────────────────
 
