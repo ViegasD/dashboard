@@ -15,7 +15,8 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
 } from "@/components/ui/sheet";
-import { ChevronDown, CheckCircle2, Circle, Plus } from "lucide-react";
+import { ChevronDown, CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 
 type GoalCategory = "Work" | "Personal" | "Health" | "Learning";
@@ -64,7 +65,7 @@ export default function GoalsPage() {
       .map((l) => l.trim())
       .filter(Boolean)
       .map((label) => ({ label }));
-    await fetch("/api/goals", {
+    const res = await fetch("/api/goals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -75,9 +76,14 @@ export default function GoalsPage() {
       }),
     });
     setSaving(false);
-    setSheetOpen(false);
-    setNewGoalForm({ title: "", category: "Work", targetDate: "", milestones: "" });
-    fetchGoals();
+    if (res.ok) {
+      setSheetOpen(false);
+      setNewGoalForm({ title: "", category: "Work", targetDate: "", milestones: "" });
+      fetchGoals();
+      toast.success("Goal created");
+    } else {
+      toast.error("Failed to create goal");
+    }
   }
 
   async function toggleMilestone(goalId: string, milestoneId: string, done: boolean) {
@@ -94,11 +100,36 @@ export default function GoalsPage() {
       })
     );
 
-    await fetch(`/api/goals/${goalId}/milestones/${milestoneId}`, {
+    const res = await fetch(`/api/goals/${goalId}/milestones/${milestoneId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ done }),
     });
+    if (!res.ok) {
+      toast.error("Failed to update milestone");
+      setGoals((prev) =>
+        prev.map((g) => {
+          if (g.id !== goalId) return g;
+          const milestones = g.milestones.map((m) =>
+            m.id === milestoneId ? { ...m, done: !done } : m
+          );
+          const doneCnt = milestones.filter((m) => m.done).length;
+          const progress = milestones.length > 0 ? Math.round((doneCnt / milestones.length) * 100) : 0;
+          return { ...g, milestones, progress };
+        })
+      );
+    }
+  }
+
+  async function deleteGoal(goalId: string) {
+    if (!confirm(t.goals.deleteConfirm)) return;
+    const res = await fetch(`/api/goals/${goalId}`, { method: "DELETE" });
+    if (res.ok || res.status === 204) {
+      setGoals((prev) => prev.filter((g) => g.id !== goalId));
+      toast.success("Goal deleted");
+    } else {
+      toast.error("Failed to delete goal");
+    }
   }
 
   function toggleGoal(id: string) {
@@ -224,6 +255,14 @@ export default function GoalsPage() {
                           </button>
                         }
                       />
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                        onClick={() => deleteGoal(g.id)}
+                        title={t.goals.deleteGoal}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                     <div className="flex items-center gap-3 mt-2">
                       <Progress value={g.progress} className="h-2 flex-1" />

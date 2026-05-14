@@ -83,6 +83,8 @@ const translations = {
       milestonesHint: "Milestones (one per line)",
       milestonesPlaceholder: "e.g.\nResearch options\nDraft plan\nReview",
       loading: "Loading…",
+      deleteGoal: "Delete goal",
+      deleteConfirm: "Delete this goal?",
     },
     plans: {
       title: "Plans",
@@ -225,6 +227,8 @@ const translations = {
       milestonesHint: "Marcos (um por linha)",
       milestonesPlaceholder: "ex:\nPesquisar opções\nRascunhar plano\nRevisar",
       loading: "Carregando…",
+      deleteGoal: "Excluir meta",
+      deleteConfirm: "Excluir esta meta?",
     },
     plans: {
       title: "Planos",

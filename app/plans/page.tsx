@@ -9,6 +9,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
 } from "@/components/ui/sheet";
 import { ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle2, Circle, LayoutGrid, Repeat2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -108,13 +109,21 @@ function HabitsTab({ weekStart }: { weekStart: Date }) {
       setHabits((prev) => [...prev, habit]);
       setSheetOpen(false);
       setNewHabit({ title: "", days: [], startHour: "", endHour: "", color: "bg-blue-500" });
+      toast.success("Habit created");
+    } else {
+      toast.error("Failed to create habit");
     }
     setSaving(false);
   }
 
   async function deleteHabit(id: string) {
-    await fetch(`/api/habits/${id}`, { method: "DELETE" });
+    const snapshot = habits;
     setHabits((prev) => prev.filter((h) => h.id !== id));
+    const res = await fetch(`/api/habits/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) {
+      toast.error("Failed to delete habit");
+      setHabits(snapshot);
+    }
   }
 
   async function toggleLog(habitId: string, date: string, currentDone: boolean) {
@@ -365,20 +374,30 @@ export default function PlansPage() {
   async function createTask(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await fetch("/api/plans", {
+    const res = await fetch("/api/plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...newTask, weekStart: toISODate(weekStart) }),
     });
     setSaving(false);
-    setSheetOpen(false);
-    setNewTask({ title: "", day: 0, startHour: 9, endHour: 10, color: "bg-blue-500" });
-    loadPlanner(weekStart);
+    if (res.ok) {
+      setSheetOpen(false);
+      setNewTask({ title: "", day: 0, startHour: 9, endHour: 10, color: "bg-blue-500" });
+      loadPlanner(weekStart);
+      toast.success("Task added");
+    } else {
+      toast.error("Failed to create task");
+    }
   }
 
   async function deleteTask(id: string) {
-    await fetch(`/api/plans/${id}`, { method: "DELETE" });
+    const snapshot = tasks;
     setTasks((prev) => prev.filter((t) => t.id !== id));
+    const res = await fetch(`/api/plans/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) {
+      toast.error("Failed to delete task");
+      setTasks(snapshot);
+    }
   }
 
   async function toggleHabitLog(habitId: string, date: string, currentDone: boolean) {

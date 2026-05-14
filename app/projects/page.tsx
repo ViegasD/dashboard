@@ -13,6 +13,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose,
 } from "@/components/ui/sheet";
 import { LayoutList, Kanban, Search, Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 
 type ProjectStatus = "backlog" | "in-progress" | "done";
@@ -292,7 +293,8 @@ export default function ProjectsPage() {
         description: form.description || null,
       }),
     });
-    if (res.ok) { closeSheet(); fetchProjects(); }
+    if (res.ok) { closeSheet(); fetchProjects(); toast.success("Project created"); }
+    else { toast.error("Failed to create project"); }
   }
 
   async function handleEdit(form: typeof EMPTY_FORM) {
@@ -308,13 +310,15 @@ export default function ProjectsPage() {
         description: form.description || null,
       }),
     });
-    if (res.ok) { closeSheet(); fetchProjects(); }
+    if (res.ok) { closeSheet(); fetchProjects(); toast.success("Project updated"); }
+    else { toast.error("Failed to update project"); }
   }
 
   async function handleDelete(id: string) {
     if (!confirm(t.projects.deleteConfirm)) return;
     const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
-    if (res.ok || res.status === 204) fetchProjects();
+    if (res.ok || res.status === 204) { fetchProjects(); toast.success("Project deleted"); }
+    else { toast.error("Failed to delete project"); }
   }
 
   async function handleStatusChange(id: string, status: ProjectStatus) {

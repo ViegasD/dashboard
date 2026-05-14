@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { Providers } from "@/components/layout/Providers";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,6 +29,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers>
           <AppShell>{children}</AppShell>
+          <Toaster richColors closeButton />
         </Providers>
       </body>
     </html>

@@ -13,6 +13,7 @@ import {
 import {
   ArrowLeft, Pencil, Plus, CheckCircle2, Circle, Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 
 type ProjectStatus = "backlog" | "in-progress" | "done";
@@ -167,6 +168,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       const task = await res.json();
       setProject((p) => p ? { ...p, tasks: [...p.tasks, task] } : p);
       setNewTitle("");
+    } else {
+      toast.error("Failed to add task");
     }
     setAdding(false);
   }
@@ -178,17 +181,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       ...p,
       tasks: p.tasks.map((t) => t.id === task.id ? { ...t, done: next } : t),
     } : p);
-    await fetch(`/api/projects/${project.id}/tasks/${task.id}`, {
+    const res = await fetch(`/api/projects/${project.id}/tasks/${task.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ done: next }),
     });
+    if (!res.ok) {
+      toast.error("Failed to update task");
+      setProject((p) => p ? {
+        ...p,
+        tasks: p.tasks.map((t) => t.id === task.id ? { ...t, done: task.done } : t),
+      } : p);
+    }
   }
 
   async function deleteTask(taskId: string) {
     if (!project) return;
+    const snapshot = project.tasks;
     setProject((p) => p ? { ...p, tasks: p.tasks.filter((t) => t.id !== taskId) } : p);
-    await fetch(`/api/projects/${project.id}/tasks/${taskId}`, { method: "DELETE" });
+    const res = await fetch(`/api/projects/${project.id}/tasks/${taskId}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) {
+      toast.error("Failed to delete task");
+      setProject((p) => p ? { ...p, tasks: snapshot } : p);
+    }
   }
 
   if (loading) {
